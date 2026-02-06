@@ -32,6 +32,7 @@ type ReloaderConfig struct {
 	Name string
 
 	ConfDir        string
+	ReloadFile     string
 	ReloadInterval time.Duration
 
 	Trigger TriggerConfig
@@ -106,6 +107,7 @@ type TriggerConfig struct {
 	BFEReloadAPI     string
 	BFEReloadTimeout time.Duration
 	ConfDir          string
+	ReloadFile       string
 }
 
 func newExtraFileTaskConfig(cf ExtraFileTaskConfigFile, rcf ReloaderConfigFile) (*ExtraFileTaskConfig, error) {
@@ -135,11 +137,11 @@ func newReloaderConfig(rcf *ReloaderConfigFile, basic BasicFile) (*ReloaderConfi
 		Name:           rcf.name,
 		ReloadInterval: time.Duration(rcf.ReloadIntervalMs) * time.Millisecond,
 		ConfDir:        rcf.ConfDir,
-
 		Trigger: TriggerConfig{
 			BFEReloadAPI:     fmt.Sprintf("http://127.0.0.1:%d%s", basic.BFEMonitorPort, rcf.BFEReloadAPI),
 			BFEReloadTimeout: time.Duration(rcf.BFEReloadTimeoutMs) * time.Millisecond,
 			ConfDir:          rcf.ConfDir,
+			ReloadFile:       rcf.ReloadFile,
 		},
 		CopyFiles: rcf.CopyFiles,
 	}
