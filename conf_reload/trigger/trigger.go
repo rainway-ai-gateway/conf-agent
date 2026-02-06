@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"path"
 
 	"github.com/baidu/conf-agent/config"
 	"github.com/baidu/conf-agent/xhttp"
@@ -37,6 +38,9 @@ func NewTrigger(c config.TriggerConfig) (*Trigger, error) {
 
 func (trigger *Trigger) TriggerBFEReload(ctx context.Context, version string) error {
 	confDir := trigger.c.ConfDir + "_" + version
+	if trigger.c.ReloadFile != "" {
+		confDir = path.Join(confDir, trigger.c.ReloadFile)
+	}
 
 	query := url.Values{}
 	query.Add("path", confDir)

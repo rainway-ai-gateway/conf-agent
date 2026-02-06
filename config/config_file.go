@@ -57,6 +57,8 @@ type ReloaderConfigFile struct {
 	// ConfDir is the reloadr conf dir, BasicFile.BFEConfDir join ConfDir is the conf root dir
 	// inherit reloader map's key as default value
 	ConfDir string `validate:"min=1"`
+
+	ReloadFile string
 	// BFEReloadAPI is the reload api of bfe, with /reload/ prefix all the time
 	BFEReloadAPI string `validate:"min=1"`
 
