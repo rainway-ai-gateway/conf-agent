@@ -45,11 +45,11 @@ ConfAPI         = "/inner-api/v1/configs/gslb_data/gslb"
 ConfFileName    = "gslb.data"
 
 
-[Reloaders.ai_token_auth]
+[Reloaders.mod_ai_token_auth]
 BFEReloadAPI    = "/reload/mod_ai_token_auth"
 ReloadFile = "token_rule.data"
 CopyFiles       = ["token_rule.data"]
-[[Reloaders.ai_token_auth.NormalFileTasks]]
+[[Reloaders.mod_ai_token_auth.NormalFileTasks]]
 ConfAPI         = "/inner-api/v1/configs/mod-api-key"
 ConfFileName    = "token_rule.data"
 
