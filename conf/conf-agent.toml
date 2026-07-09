@@ -53,6 +53,14 @@ CopyFiles       = ["token_rule.data", "mod_ai_token_auth.conf"]
 ConfAPI         = "/inner-api/v1/configs/mod-api-key"
 ConfFileName    = "token_rule.data"
 
+[Reloaders.mod_ai_rate_limit]
+BFEReloadAPI    = "/reload/mod_ai_rate_limit"
+ReloadFile = "ai_rate_limit.data"
+CopyFiles       = ["ai_rate_limit.data", "mod_ai_rate_limit.conf"]
+[[Reloaders.mod_ai_rate_limit.NormalFileTasks]]
+ConfAPI         = "/inner-api/v1/configs/rate-limit-policy"
+ConfFileName    = "ai_rate_limit.data"
+
 # # reloader for tls_conf files, detail see https://www.bfe-networks.net/en_us/configuration/tls_conf/server_cert_conf.data/
 [Reloaders.tls_conf]
 CopyFiles      = ["client_ca", "client_crl", "server_cert_conf.data", "session_ticket_key.data", "tls_rule_conf.data"]

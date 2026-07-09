@@ -16,6 +16,7 @@ package file_store
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -117,7 +118,8 @@ func (fileStore *FileStore) StoreFile2TmpDir(ctx context.Context, version string
 
 	// write content to file
 	for fileName, fileContent := range files {
-		if err := xfile.FileOverwrite(filepath.Join(tmpDir, fileName), fileContent); err != nil {
+		formattedContent := formatJSONWithIndent(fileContent)
+		if err := xfile.FileOverwrite(filepath.Join(tmpDir, fileName), formattedContent); err != nil {
 			xlog.Default.Error(xlog.ErrLogFormat(ctx, "fileStore.FileOverwrite", err))
 			return err
 		}
@@ -127,4 +129,18 @@ func (fileStore *FileStore) StoreFile2TmpDir(ctx context.Context, version string
 	}
 
 	return nil
+}
+
+func formatJSONWithIndent(content []byte) []byte {
+	var jsonData interface{}
+	if err := json.Unmarshal(content, &jsonData); err != nil {
+		return content
+	}
+
+	formatted, err := json.MarshalIndent(jsonData, "", "    ")
+	if err != nil {
+		return content
+	}
+
+	return formatted
 }
