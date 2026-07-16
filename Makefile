@@ -46,6 +46,12 @@ compile: build
 build: prepare
 	$(GOBUILD) -o $(HOMEDIR)/conf-agent
 
+#make compile-static, static compile
+compile-static: build-static
+
+build-static: prepare
+	CGO_ENABLED=0 $(GOBUILD) -a -installsuffix cgo -o $(HOMEDIR)/conf-agent
+
 # make test, test your code
 test: prepare test-case
 test-case:
@@ -78,4 +84,4 @@ clean:
 	rm -rf $(HOMEDIR)/conf-agent
 
 # avoid filename conflict and speed up build 
-.PHONY: all prepare compile test package clean build
+.PHONY: all prepare compile test package clean build compile-static build-static
