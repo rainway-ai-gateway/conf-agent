@@ -61,6 +61,14 @@ CopyFiles       = ["ai_rate_limit.data", "mod_ai_rate_limit.conf"]
 ConfAPI         = "/inner-api/v1/configs/rate-limit-policy"
 ConfFileName    = "ai_rate_limit.data"
 
+[Reloaders.mod_body_process]
+BFEReloadAPI    = "/reload/mod_body_process"
+ReloadFile = "body_process_rule.data"
+CopyFiles       = ["body_process_rule.data", "mod_body_process.conf"]
+[[Reloaders.mod_body_process.NormalFileTasks]]
+ConfAPI         = "/inner-api/v1/configs/mod-body-process"
+ConfFileName    = "body_process_rule.data"
+
 # # reloader for tls_conf files, detail see https://www.bfe-networks.net/en_us/configuration/tls_conf/server_cert_conf.data/
 [Reloaders.tls_conf]
 CopyFiles      = ["client_ca", "client_crl", "server_cert_conf.data", "session_ticket_key.data", "tls_rule_conf.data"]
