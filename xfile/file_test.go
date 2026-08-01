@@ -15,7 +15,7 @@
 package xfile
 
 import (
-	"os/exec"
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -47,10 +47,12 @@ func TestRenameFileIfNotLinkFile(t *testing.T) {
 					return err
 				}
 
-				cmd := exec.Command("ln", "-sf", "link_file_real", "link_file")
-				cmd.Dir = dir
+				// Use FileLink so the test works on both Unix and Windows.
+				if err := FileLink(filepath.Join(dir, "link_file_real"), filepath.Join(dir, "link_file")); err != nil {
+					return err
+				}
 
-				return cmd.Run()
+				return nil
 			},
 			wantErr: false,
 		},
@@ -80,7 +82,7 @@ func TestRenameFileIfNotLinkFile(t *testing.T) {
 			t.Errorf("name: %s RenameFileIfNotLinkFile() error = %v, wantErr %v", tt.name, err, tt.wantErr)
 		}
 
-		if err := exec.Command("rm", "-rf", dir).Run(); err != nil {
+		if err := os.RemoveAll(dir); err != nil {
 			t.Error(err)
 			return
 		}

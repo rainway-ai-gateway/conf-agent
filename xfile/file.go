@@ -15,14 +15,13 @@
 package xfile
 
 import (
-	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
-	"strings"
+	"runtime"
 )
 
 func IsFileNotExistError(err error) bool {
@@ -30,11 +29,11 @@ func IsFileNotExistError(err error) bool {
 		return false
 	}
 
-	return strings.Contains(strings.ToLower(err.Error()), "no such file or directory")
+	return os.IsNotExist(err)
 }
 
 func FileOverwrite(fileName string, content []byte) error {
-	dir := path.Dir(fileName)
+	dir := filepath.Dir(fileName)
 	_, err := os.Stat(dir)
 	if os.IsNotExist(err) {
 		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
@@ -49,12 +48,83 @@ func FileOverwrite(fileName string, content []byte) error {
 	return nil
 }
 
+// FileCopyRecursive copies a file or directory recursively from `from` to `to`.
+// When `from` is a file and `to` is a directory, the file is copied into `to`.
 func FileCopyRecursive(from, to string) error {
-	if bs, err := exec.Command("cp", "-rf", from, to).CombinedOutput(); err != nil {
-		return fmt.Errorf("FileCopyRecursive fail, from: %s, to: %s, err: %s", from, to, bytes.Trim(bs, "\r\n"))
+	fromInfo, err := os.Stat(from)
+	if err != nil {
+		return fmt.Errorf("FileCopyRecursive fail, from: %s, to: %s, err: %v", from, to, err)
 	}
 
-	return nil
+	if fromInfo.IsDir() {
+		return copyDir(from, to)
+	}
+
+	// from is a file
+	target := to
+	toInfo, err := os.Stat(to)
+	if err == nil && toInfo.IsDir() {
+		target = filepath.Join(to, filepath.Base(from))
+	} else if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("FileCopyRecursive fail, from: %s, to: %s, err: %v", from, to, err)
+	}
+
+	return copyFile(from, target)
+}
+
+func copyFile(src, dst string) error {
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer srcFile.Close()
+
+	if err := os.MkdirAll(filepath.Dir(dst), os.ModePerm); err != nil {
+		return err
+	}
+
+	dstFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer dstFile.Close()
+
+	if _, err := io.Copy(dstFile, srcFile); err != nil {
+		return err
+	}
+
+	return dstFile.Sync()
+}
+
+func copyDir(src, dst string) error {
+	srcInfo, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+
+	entries, err := ioutil.ReadDir(src)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		srcPath := filepath.Join(src, entry.Name())
+		dstPath := filepath.Join(dst, entry.Name())
+
+		if entry.IsDir() {
+			if err := copyDir(srcPath, dstPath); err != nil {
+				return err
+			}
+			continue
+		}
+
+		if err := copyFile(srcPath, dstPath); err != nil {
+			return err
+		}
+	}
+
+	// preserve source directory permissions
+	return os.Chmod(dst, srcInfo.Mode())
 }
 
 // RenameFileIfNotLinkFile rename oldPath to newPath then link oldPath to newPath if oldPath is not a link file
@@ -79,8 +149,33 @@ func RenameFileIfNotLinkFile(oldPath, newPath string) error {
 }
 
 func FileLink(target, linkName string) error {
-	if err := exec.Command("ln", "-sf", target, linkName).Run(); err != nil {
-		return fmt.Errorf("ln -sf %s, %s fail, err: %v", target, linkName, err)
+	// Normalize paths; Windows mklink requires backslashes.
+	target = filepath.FromSlash(target)
+	linkName = filepath.FromSlash(linkName)
+
+	// Ensure the target exists so we can decide between a directory junction
+	// (Windows, no special privilege required) and a symbolic link.
+	targetInfo, err := os.Stat(target)
+	if err != nil {
+		return fmt.Errorf("link target not exist, target: %s, err: %v", target, err)
+	}
+
+	// remove existing link name so the new link won't fail
+	_ = os.Remove(linkName)
+
+	// On Windows, directory junctions are preferred over symlinks because they
+	// do not require developer mode or administrative privileges.
+	if runtime.GOOS == "windows" && targetInfo.IsDir() {
+		cmd := exec.Command("cmd", "/c", "mklink", "/J", linkName, target)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("create junction %s -> %s fail, err: %v, output: %s", linkName, target, err, string(out))
+		}
+		return nil
+	}
+
+	if err := os.Symlink(target, linkName); err != nil {
+		return fmt.Errorf("symlink %s, %s fail, err: %v", target, linkName, err)
 	}
 
 	return nil
