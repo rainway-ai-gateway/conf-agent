@@ -166,16 +166,35 @@ func FileLink(target, linkName string) error {
 	// On Windows, directory junctions are preferred over symlinks because they
 	// do not require developer mode or administrative privileges.
 	if runtime.GOOS == "windows" && targetInfo.IsDir() {
-		cmd := exec.Command("cmd", "/c", "mklink", "/J", linkName, target)
+		// mklink /J works reliably with absolute paths; relative paths may be
+		// interpreted against the current directory and create broken junctions.
+		absTarget, err := filepath.Abs(target)
+		if err != nil {
+			return fmt.Errorf("get abs target fail, target: %s, err: %v", target, err)
+		}
+		absLinkName, err := filepath.Abs(linkName)
+		if err != nil {
+			return fmt.Errorf("get abs link name fail, linkName: %s, err: %v", linkName, err)
+		}
+		cmd := exec.Command("cmd", "/c", "mklink", "/J", absLinkName, absTarget)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
-			return fmt.Errorf("create junction %s -> %s fail, err: %v, output: %s", linkName, target, err, string(out))
+			return fmt.Errorf("create junction %s -> %s fail, err: %v, output: %s", absLinkName, absTarget, err, string(out))
 		}
 		return nil
 	}
 
-	if err := os.Symlink(target, linkName); err != nil {
-		return fmt.Errorf("symlink %s, %s fail, err: %v", target, linkName, err)
+	// For Unix symlinks (and Windows file symlinks), store the target as a path
+	// relative to the link's directory. This matches the behavior of ln -sf and
+	// keeps symlinks valid regardless of the current working directory.
+	relTarget, err := filepath.Rel(filepath.Dir(linkName), target)
+	if err != nil {
+		// Targets on different filesystem roots; fall back to the original target.
+		relTarget = target
+	}
+
+	if err := os.Symlink(relTarget, linkName); err != nil {
+		return fmt.Errorf("symlink %s, %s fail, err: %v", relTarget, linkName, err)
 	}
 
 	return nil
