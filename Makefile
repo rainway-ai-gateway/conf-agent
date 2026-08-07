@@ -77,6 +77,29 @@ license-check: license-eye-install
 license-fix: license-eye-install
 	$(LICENSEEYE) header fix
 
+# make release - cross-compile linux/amd64 + linux/arm64 and package into dist/
+VERSION     := $(shell grep 'const Version' $(HOMEDIR)/version/version.go | sed 's/.*"\([^"]*\)".*/\1/')
+DISTDIR     := $(HOMEDIR)/dist
+RELEASE_ARCHS := amd64 arm64
+
+release: prepare
+	@rm -rf $(DISTDIR)/conf-agent_$(VERSION)_linux_*.tar.gz
+	@mkdir -p $(DISTDIR)
+	@for arch in $(RELEASE_ARCHS); do \
+		stage=$(DISTDIR)/tmp-conf-agent_$(VERSION)_linux_$$arch; \
+		rm -rf $$stage && mkdir -p $$stage; \
+		echo "==> building linux/$$arch (version $(VERSION))"; \
+		GOOS=linux GOARCH=$$arch CGO_ENABLED=0 $(GOBUILD) -a -installsuffix cgo -o $$stage/conf-agent; \
+		cp -rf conf      $$stage/; \
+		cp -rf docs      $$stage/; \
+		cp -f  LICENSE   $$stage/; \
+		cp -f  README.md $$stage/; \
+		(cd $$stage && tar czvf ../conf-agent_$(VERSION)_linux_$$arch.tar.gz .); \
+		rm -rf $$stage; \
+	done
+	@echo "==> release artifacts:"
+	@ls -lh $(DISTDIR)/conf-agent_$(VERSION)_linux_*.tar.gz
+
 # make clean
 clean:
 	$(GO) clean
@@ -84,4 +107,4 @@ clean:
 	rm -rf $(HOMEDIR)/conf-agent
 
 # avoid filename conflict and speed up build 
-.PHONY: all prepare compile test package clean build compile-static build-static
+.PHONY: all prepare compile test package clean build compile-static build-static release
