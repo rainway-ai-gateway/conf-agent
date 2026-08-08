@@ -20,10 +20,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/baidu/conf-agent/agent"
-	"github.com/baidu/conf-agent/config"
-	"github.com/baidu/conf-agent/xlog"
-	"github.com/baidu/conf-agent/version"
+	"github.com/infinity-ai-gateway/conf-agent/agent"
+	"github.com/infinity-ai-gateway/conf-agent/config"
+	"github.com/infinity-ai-gateway/conf-agent/xlog"
+	"github.com/infinity-ai-gateway/conf-agent/version"
 )
 
 var (

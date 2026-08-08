@@ -19,8 +19,8 @@ import (
 	"encoding/json"
 	"path"
 
-	"github.com/baidu/conf-agent/config"
-	"github.com/baidu/conf-agent/xlog"
+	"github.com/infinity-ai-gateway/conf-agent/config"
+	"github.com/infinity-ai-gateway/conf-agent/xlog"
 )
 
 type MultiKeyFileTask struct {

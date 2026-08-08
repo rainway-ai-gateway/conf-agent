@@ -15,8 +15,8 @@
 package agent
 
 import (
-	"github.com/baidu/conf-agent/conf_reload"
-	"github.com/baidu/conf-agent/config"
+	"github.com/infinity-ai-gateway/conf-agent/conf_reload"
+	"github.com/infinity-ai-gateway/conf-agent/config"
 )
 
 // The Agent keep reloaders.

@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/baidu/conf-agent/config"
+	"github.com/infinity-ai-gateway/conf-agent/config"
 )
 
 func TestTrigger_TriggerBFEReload(t *testing.T) {

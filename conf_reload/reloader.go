@@ -19,11 +19,11 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/baidu/conf-agent/conf_reload/file_store"
-	"github.com/baidu/conf-agent/conf_reload/prober"
-	"github.com/baidu/conf-agent/conf_reload/trigger"
-	"github.com/baidu/conf-agent/config"
-	"github.com/baidu/conf-agent/xlog"
+	"github.com/infinity-ai-gateway/conf-agent/conf_reload/file_store"
+	"github.com/infinity-ai-gateway/conf-agent/conf_reload/prober"
+	"github.com/infinity-ai-gateway/conf-agent/conf_reload/trigger"
+	"github.com/infinity-ai-gateway/conf-agent/config"
+	"github.com/infinity-ai-gateway/conf-agent/xlog"
 )
 
 type Reloader struct {
