@@ -20,9 +20,9 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/baidu/conf-agent/config"
-	"github.com/baidu/go-lib/log"
-	"github.com/baidu/go-lib/log/log4go"
+	"github.com/infinity-ai-gateway/conf-agent/config"
+	"github.com/bfenetworks/go-lib/log"
+	"github.com/bfenetworks/go-lib/log/log4go"
 )
 
 type Logger interface {

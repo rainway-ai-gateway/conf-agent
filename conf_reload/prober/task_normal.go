@@ -26,9 +26,9 @@ import (
 	"path"
 	"regexp"
 
-	"github.com/baidu/conf-agent/config"
-	"github.com/baidu/conf-agent/xhttp"
-	"github.com/baidu/conf-agent/xlog"
+	"github.com/infinity-ai-gateway/conf-agent/config"
+	"github.com/infinity-ai-gateway/conf-agent/xhttp"
+	"github.com/infinity-ai-gateway/conf-agent/xlog"
 )
 
 type NormalFileTask struct {

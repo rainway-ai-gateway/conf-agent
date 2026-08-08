@@ -1,4 +1,4 @@
-// Copyright(c) 2026 Beijing Yingfei Networks Technology Co.Ltd.
+// Copyright(c) 2026 The Infinity AI Gateway Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,8 +21,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/baidu/conf-agent/xfile"
-	"github.com/baidu/conf-agent/xlog"
+	"github.com/infinity-ai-gateway/conf-agent/xfile"
+	"github.com/infinity-ai-gateway/conf-agent/xlog"
 )
 
 type FileStore struct {
