@@ -26,9 +26,9 @@ import (
 	"path"
 	"regexp"
 
-	"github.com/infinity-ai-gateway/conf-agent/config"
-	"github.com/infinity-ai-gateway/conf-agent/xhttp"
-	"github.com/infinity-ai-gateway/conf-agent/xlog"
+	"github.com/rainway-ai-gateway/conf-agent/config"
+	"github.com/rainway-ai-gateway/conf-agent/xhttp"
+	"github.com/rainway-ai-gateway/conf-agent/xlog"
 )
 
 type NormalFileTask struct {

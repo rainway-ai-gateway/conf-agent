@@ -19,8 +19,8 @@ import (
 	"encoding/json"
 	"path"
 
-	"github.com/infinity-ai-gateway/conf-agent/config"
-	"github.com/infinity-ai-gateway/conf-agent/xlog"
+	"github.com/rainway-ai-gateway/conf-agent/config"
+	"github.com/rainway-ai-gateway/conf-agent/xlog"
 )
 
 type MultiKeyFileTask struct {

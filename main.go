@@ -20,10 +20,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/infinity-ai-gateway/conf-agent/agent"
-	"github.com/infinity-ai-gateway/conf-agent/config"
-	"github.com/infinity-ai-gateway/conf-agent/xlog"
-	"github.com/infinity-ai-gateway/conf-agent/version"
+	"github.com/rainway-ai-gateway/conf-agent/agent"
+	"github.com/rainway-ai-gateway/conf-agent/config"
+	"github.com/rainway-ai-gateway/conf-agent/xlog"
+	"github.com/rainway-ai-gateway/conf-agent/version"
 )
 
 var (

@@ -18,7 +18,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/infinity-ai-gateway/conf-agent/config"
+	"github.com/rainway-ai-gateway/conf-agent/config"
 )
 
 type FetchFileResult struct {

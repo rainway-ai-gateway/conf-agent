@@ -1,4 +1,4 @@
-module github.com/infinity-ai-gateway/conf-agent
+module github.com/rainway-ai-gateway/conf-agent
 
 go 1.16
 
