@@ -1,4 +1,4 @@
-// Copyright(c) 2026 The Infinity AI Gateway Authors.
+// Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,8 +21,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/infinity-ai-gateway/conf-agent/xfile"
-	"github.com/infinity-ai-gateway/conf-agent/xlog"
+	"github.com/rainway-ai-gateway/conf-agent/xfile"
+	"github.com/rainway-ai-gateway/conf-agent/xlog"
 )
 
 type FileStore struct {

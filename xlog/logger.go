@@ -20,7 +20,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/infinity-ai-gateway/conf-agent/config"
+	"github.com/rainway-ai-gateway/conf-agent/config"
 	"github.com/bfenetworks/go-lib/log"
 	"github.com/bfenetworks/go-lib/log/log4go"
 )

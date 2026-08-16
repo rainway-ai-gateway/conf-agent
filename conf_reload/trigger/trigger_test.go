@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/infinity-ai-gateway/conf-agent/config"
+	"github.com/rainway-ai-gateway/conf-agent/config"
 )
 
 func TestTrigger_TriggerBFEReload(t *testing.T) {
