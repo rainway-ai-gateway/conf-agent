@@ -1,0 +1,302 @@
+// Copyright(c) 2026 The Rainway AI Gateway (壬远AI网关) Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package file_store
+
+import (
+	"context"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/rainway-ai-gateway/conf-agent/xfile"
+)
+
+func TestNewFileStoreDefaultVersionKeepCount(t *testing.T) {
+	fs, err := NewFileStore("/tmp/test", nil, 0)
+	if err != nil {
+		t.Fatalf("NewFileStore fail, err: %v", err)
+	}
+
+	if fs.VersionKeepCount != 1 {
+		t.Fatalf("expect VersionKeepCount=1, got %d", fs.VersionKeepCount)
+	}
+}
+
+func TestStoreFile2TmpDirWritesVersionMarker(t *testing.T) {
+	tmpDir := t.TempDir()
+	confDir := filepath.Join(tmpDir, "mod_demo")
+	fs, err := NewFileStore(confDir, nil, 2)
+	if err != nil {
+		t.Fatalf("NewFileStore fail, err: %v", err)
+	}
+
+	version := "20260101120000"
+	files := map[string][]byte{
+		"test.json": []byte(`{"Version":"20260101120000"}`),
+	}
+
+	if err := fs.StoreFile2TmpDir(context.Background(), version, files); err != nil {
+		t.Fatalf("StoreFile2TmpDir fail, err: %v", err)
+	}
+
+	markerFile := filepath.Join(fs.tmpDir(version), versionMarkerFile)
+	content, err := os.ReadFile(markerFile)
+	if err != nil {
+		t.Fatalf("read marker file fail, err: %v", err)
+	}
+
+	if string(content) != version {
+		t.Fatalf("expect marker content %s, got %s", version, string(content))
+	}
+}
+
+func TestCleanupOldVersionsKeepRecentN(t *testing.T) {
+	tmpDir := t.TempDir()
+	confDir := filepath.Join(tmpDir, "mod_demo")
+	fs, err := NewFileStore(confDir, nil, 2)
+	if err != nil {
+		t.Fatalf("NewFileStore fail, err: %v", err)
+	}
+
+	// create old version directories with explicit mod times (older first)
+	versions := []string{
+		"20260101120001",
+		"20260101120002",
+		"20260101120003",
+		"20260101120004",
+	}
+	baseTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	for i, v := range versions {
+		createVersionDir(t, fs.tmpDir(v), v)
+		setDirModTime(t, fs.tmpDir(v), baseTime.Add(time.Duration(i)*time.Second))
+	}
+
+	// create current symlink target with the newest mod time
+	currentVersion := "20260101120005"
+	currentDir := fs.tmpDir(currentVersion)
+	createVersionDir(t, currentDir, currentVersion)
+	setDirModTime(t, currentDir, baseTime.Add(time.Duration(len(versions))*time.Second))
+	if err := xfile.FileLink(currentDir, confDir); err != nil {
+		t.Fatalf("create link fail, err: %v", err)
+	}
+
+	if err := fs.cleanupOldVersions(context.Background(), fs.VersionKeepCount); err != nil {
+		t.Fatalf("cleanupOldVersions fail, err: %v", err)
+	}
+
+	// current + one previous should be kept
+	assertDirExists(t, currentDir)
+	assertDirExists(t, fs.tmpDir("20260101120004"))
+
+	// older versions should be removed
+	assertDirNotExists(t, fs.tmpDir("20260101120003"))
+	assertDirNotExists(t, fs.tmpDir("20260101120002"))
+	assertDirNotExists(t, fs.tmpDir("20260101120001"))
+}
+
+func TestCleanupOldVersionsIgnoreDirsWithoutMarker(t *testing.T) {
+	tmpDir := t.TempDir()
+	confDir := filepath.Join(tmpDir, "mod_demo")
+	fs, err := NewFileStore(confDir, nil, 2)
+	if err != nil {
+		t.Fatalf("NewFileStore fail, err: %v", err)
+	}
+
+	currentVersion := "20260101120002"
+	currentDir := fs.tmpDir(currentVersion)
+	createVersionDir(t, currentDir, currentVersion)
+	if err := xfile.FileLink(currentDir, confDir); err != nil {
+		t.Fatalf("create link fail, err: %v", err)
+	}
+
+	// directory with marker
+	createVersionDir(t, fs.tmpDir("20260101120001"), "20260101120001")
+
+	// directory without marker
+	noMarkerDir := fs.tmpDir("20260101120000") + "_manual"
+	if err := os.MkdirAll(noMarkerDir, os.ModePerm); err != nil {
+		t.Fatalf("mkdir fail, err: %v", err)
+	}
+
+	if err := fs.cleanupOldVersions(context.Background(), 1); err != nil {
+		t.Fatalf("cleanupOldVersions fail, err: %v", err)
+	}
+
+	assertDirNotExists(t, fs.tmpDir("20260101120001"))
+	assertDirExists(t, noMarkerDir)
+}
+
+func TestUpdateDefaultConfDirCreatesLinkWhenConfDirMissing(t *testing.T) {
+	tmpDir := t.TempDir()
+	confDir := filepath.Join(tmpDir, "mod_demo")
+	fs, err := NewFileStore(confDir, nil, 2)
+	if err != nil {
+		t.Fatalf("NewFileStore fail, err: %v", err)
+	}
+
+	version := "20260101120000"
+	createVersionDir(t, fs.tmpDir(version), version)
+
+	if err := fs.UpdateDefaultConfDir(context.Background(), version); err != nil {
+		t.Fatalf("UpdateDefaultConfDir fail, err: %v", err)
+	}
+
+	dest, err := filepath.EvalSymlinks(confDir)
+	if err != nil {
+		t.Fatalf("eval symlink fail, err: %v", err)
+	}
+
+	absExpected, _ := filepath.Abs(fs.tmpDir(version))
+	absDest, _ := filepath.Abs(dest)
+	if absDest != absExpected {
+		t.Fatalf("expect symlink target %s, got %s", absExpected, absDest)
+	}
+}
+
+func TestUpdateDefaultConfDirBacksUpRegularDirectory(t *testing.T) {
+	tmpDir := t.TempDir()
+	confDir := filepath.Join(tmpDir, "mod_demo")
+	fs, err := NewFileStore(confDir, nil, 2)
+	if err != nil {
+		t.Fatalf("NewFileStore fail, err: %v", err)
+	}
+
+	// create a regular directory as ConfDir
+	if err := os.MkdirAll(confDir, os.ModePerm); err != nil {
+		t.Fatalf("mkdir fail, err: %v", err)
+	}
+	oldFile := filepath.Join(confDir, "old.json")
+	if err := os.WriteFile(oldFile, []byte("old"), 0644); err != nil {
+		t.Fatalf("write old file fail, err: %v", err)
+	}
+
+	version := "20260101120000"
+	createVersionDir(t, fs.tmpDir(version), version)
+
+	if err := fs.UpdateDefaultConfDir(context.Background(), version); err != nil {
+		t.Fatalf("UpdateDefaultConfDir fail, err: %v", err)
+	}
+
+	// ConfDir should now be a link to tmp dir
+	dest, err := filepath.EvalSymlinks(confDir)
+	if err != nil {
+		t.Fatalf("eval symlink fail, err: %v", err)
+	}
+
+	absExpected, _ := filepath.Abs(fs.tmpDir(version))
+	absDest, _ := filepath.Abs(dest)
+	if absDest != absExpected {
+		t.Fatalf("expect symlink target %s, got %s", absExpected, absDest)
+	}
+
+	// old directory should be backed up
+	entries, err := os.ReadDir(tmpDir)
+	if err != nil {
+		t.Fatalf("read dir fail, err: %v", err)
+	}
+
+	foundBackup := false
+	for _, entry := range entries {
+		if strings.HasPrefix(entry.Name(), "mod_demo_") && strings.HasSuffix(entry.Name(), ".backup") {
+			foundBackup = true
+			break
+		}
+	}
+
+	if !foundBackup {
+		t.Fatalf("old conf dir should be backed up")
+	}
+}
+
+func TestUpdateDefaultConfDirSwitchesLinkTarget(t *testing.T) {
+	tmpDir := t.TempDir()
+	confDir := filepath.Join(tmpDir, "mod_demo")
+	fs, err := NewFileStore(confDir, nil, 2)
+	if err != nil {
+		t.Fatalf("NewFileStore fail, err: %v", err)
+	}
+
+	oldVersion := "20260101120000"
+	newVersion := "20260101120001"
+	createVersionDir(t, fs.tmpDir(oldVersion), oldVersion)
+	createVersionDir(t, fs.tmpDir(newVersion), newVersion)
+
+	// create initial link
+	if err := xfile.FileLink(fs.tmpDir(oldVersion), confDir); err != nil {
+		t.Fatalf("create initial link fail, err: %v", err)
+	}
+
+	// switch to new version
+	if err := fs.UpdateDefaultConfDir(context.Background(), newVersion); err != nil {
+		t.Fatalf("UpdateDefaultConfDir fail, err: %v", err)
+	}
+
+	dest, err := filepath.EvalSymlinks(confDir)
+	if err != nil {
+		t.Fatalf("eval symlink fail, err: %v", err)
+	}
+
+	absExpected, _ := filepath.Abs(fs.tmpDir(newVersion))
+	absDest, _ := filepath.Abs(dest)
+	if absDest != absExpected {
+		t.Fatalf("expect symlink target %s, got %s", absExpected, absDest)
+	}
+
+	// old version should be removed (keep=2, current + no previous because only one old exists)
+	// Actually keep=2 means current + 1 previous. But we only have one old version.
+	// Since newVersion is current, oldVersion is the previous, so it should be kept.
+	assertDirExists(t, fs.tmpDir(oldVersion))
+}
+
+func setDirModTime(t *testing.T, dir string, modTime time.Time) {
+	t.Helper()
+	if err := os.Chtimes(dir, modTime, modTime); err != nil {
+		t.Fatalf("set dir mod time fail, dir: %s, err: %v", dir, err)
+	}
+}
+
+func createVersionDir(t *testing.T, dir, version string) {
+	t.Helper()
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		t.Fatalf("mkdir fail, dir: %s, err: %v", dir, err)
+	}
+
+	markerFile := filepath.Join(dir, versionMarkerFile)
+	if err := os.WriteFile(markerFile, []byte(version), 0644); err != nil {
+		t.Fatalf("write marker fail, file: %s, err: %v", markerFile, err)
+	}
+
+	// touch a config file
+	configFile := filepath.Join(dir, "config.json")
+	if err := os.WriteFile(configFile, []byte(`{"Version":"`+version+`"}`), 0644); err != nil {
+		t.Fatalf("write config fail, file: %s, err: %v", configFile, err)
+	}
+}
+
+func assertDirExists(t *testing.T, dir string) {
+	t.Helper()
+	if _, err := os.Stat(dir); err != nil {
+		t.Fatalf("expect dir %s to exist, err: %v", dir, err)
+	}
+}
+
+func assertDirNotExists(t *testing.T, dir string) {
+	t.Helper()
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		t.Fatalf("expect dir %s to not exist", dir)
+	}
+}
