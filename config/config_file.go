@@ -31,6 +31,8 @@ type BasicFile struct {
 	BFEMonitorPort int `validate:"required"`
 	// BFEReloadTimeoutMs is the timeout of reload BFE request
 	BFEReloadTimeoutMs int `validate:"min=1"`
+	// VersionKeepCount is the number of version directories to keep
+	VersionKeepCount int `validate:"min=1"`
 
 	// ConfServer is api server address
 	ConfServer string `validate:"min=1"`
@@ -65,6 +67,7 @@ type ReloaderConfigFile struct {
 	// optional, inherit BasicConfig if not set
 	BFEReloadTimeoutMs int `validate:"min=1"`
 	ReloadIntervalMs   int `validate:"min=1"`
+	VersionKeepCount   int `validate:"min=1"`
 
 	// CopyFiles is the file/directory which will be copy from default conf dir to newer version conf dir
 	// many conf can't fetch from conf file, newer version conf dir show inherit them so bfe can startup aftert stop
@@ -217,6 +220,12 @@ func (reloader *ReloaderConfigFile) merge(basic *BasicFile) error {
 	}
 	if reloader.ReloadIntervalMs == 0 {
 		reloader.ReloadIntervalMs = basic.ReloadIntervalMs
+	}
+	if reloader.VersionKeepCount == 0 {
+		reloader.VersionKeepCount = basic.VersionKeepCount
+	}
+	if reloader.VersionKeepCount == 0 {
+		reloader.VersionKeepCount = 2
 	}
 
 	return nil

@@ -12,9 +12,9 @@
 | - | - | - | - | - | - |
 | LogDir | string | 日志文件目录 | Y | - | |
 | LogName | string | 日志文件名 | Y | - | |
-| LogLevel | string | 日志等价 | Y | - |  可选： DEBUG TRACE INFO WARNING ERROR CRITICAL|
+| LogLevel | string | 日志等级 | Y | - |  可选： DEBUG TRACE INFO WARNING ERROR CRITICAL|
 | RotateWhen | string | 日志文件切割策略 | Y | - | 可选：M：每分钟 H：每小时 D：每天 MIDNIGHT：午夜切割 |
-| BackupCount | int | 日志文件保留格式 | Y | - | |
+| BackupCount | int | 日志文件保留数量 | Y | - | |
 | Format | string | 日志消息格式 | Y | - | |
 | StdOut | bool | 日志内容是否控制台输出 | N | - | |
 
@@ -29,10 +29,10 @@
 | ReloadIntervalMs             | int | 拉取时间间隔 | N | 10000 |  |
 | ConfServer              | string | APIServer服务器，用来拉取配置 | Y | - |  |
 | ConfTaskHeaders        | map\<string\>string  | 配置请求Header, Api Server 当前会对请求鉴权，需要设置 Authorization 头， [通过Dashboard获取Token](https://github.com/bfenetworks/dashboard/blob/develop/docs/zh-cn/user-guide/system-view/user-management.md#token%E7%AE%A1%E7%90%86) | N | - |  |
-| ConfTaskTimeoutMs      | int | 配置拉取超时 | Y | 2500 |  |
+| ConfTaskTimeoutMs      | int | 配置拉取超时 | N | 2500 |  |
 | ExtraFileServer         | string | 静态文件服务器，用来拉取静态文件 | Y | - |  |
 | ExtraFileTaskHeaders   | map\<string\>string  | 静态文件请求Header, Api Server 当前会对请求鉴权，需要设置 Authorization 头， [通过Dashboard获取Token](https://github.com/bfenetworks/dashboard/blob/develop/docs/zh-cn/user-guide/system-view/user-management.md#token%E7%AE%A1%E7%90%86) | N | - |  |
-| ExtraFileTaskTimeoutMs | int | 静态文件拉取超时 | Y | 2500 |  |
+| ExtraFileTaskTimeoutMs | int | 静态文件拉取超时 | N | 2500 |  |
 
 ## 3 Reloaders配置
 
@@ -42,9 +42,10 @@ Reloaders 是个 map\<string\>Reloader 数据类型，key为名字，value为详
 | Key | 数据类型 | 含义  | 必填 | 默认值 | 说明 | 
 | - | - | - | - | - | - |
 | ConfDir          | string | 模块配置本地目录 | N | 同模块名 | 模块的配置将保留在 {BFEConfDir}/{ConfDir}/下 |
-| BFEReloadAPI  | string | bfe reload API | Y | - | 见 [数据面reload](https://www.bfe-networks.net/zh_cn/operation/reload/) |
-| BFEReloadTimeoutMs  |  |  | N  |  | 同 Basic.BFEReloadTimeoutMs，若未设置使用 Basic 设置 |
-| ReloadIntervalMs  |  |  | N  |  | 同 Basic.ReloadIntervalMs，若未设置使用 Basic 设置 |
+| BFEReloadAPI  | string | bfe reload API | N | /reload/{reloaderName} | 见 [数据面reload](https://www.bfe-networks.net/zh_cn/operation/reload/) |
+| BFEReloadTimeoutMs  | int | BFE reload 超时设置 | N  | 同 Basic.BFEReloadTimeoutMs | 若未设置使用 Basic 设置 |
+| ReloadIntervalMs  | int | 拉取时间间隔 | N  | 同 Basic.ReloadIntervalMs | 若未设置使用 Basic 设置 |
+| ReloadFile  | string | bfe reload 时指定的子文件/目录 | N | - | 若设置，BFE reload URL 中的 path 会追加 `/{ReloadFile}`；常用于只需要加载某个子配置的场景 |
 | CopyFiles          | []string | 保留的文件列表 | N | - | 有些配置当前不会通过api server 的配置导出的接口更新，但是bfe冷启动时必须读取。对于这些文件，需要从默认文件夹copy到最新的配置文件夹当做初始化配置。 |
 | NormalFileTasks  | []NormalFileTask |  | N  |  | 普通配置文件任务列表。详细说明见后续说明 |
 | MultiKeyFileTasks  | []MultiKeyFileTask |  | N  |  | 多个Key配置文件任务列表。详细说明见后续说明 |
