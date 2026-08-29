@@ -10,6 +10,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [v0.0.6] - 2026-08-29
+
+### Added
+- Add `VersionKeepCount` config option to control how many old config directories to keep.
+- Add `.conf-agent-version` marker files in versioned config directories.
+- Add `Stop()` methods to `Reloader` and `Agent` for graceful shutdown.
+- Add integration tests for config directory cleanup.
+- Add system design documentation and `AGENTS.md`.
+
+### Changed
+- Harden `UpdateDefaultConfDir` to handle missing/broken symlinks, plain directories, and Windows junctions.
+- Migrate module path and copyright from `infinity-ai-gateway` to `rainway-ai-gateway`.
+
+### Fixed
+- Fix `Reloader` log bug on `UpdateDefaultConfDir` failure.
+
+
 ## [v0.0.5] - 2026-08-01
 
 ### Added
@@ -32,5 +49,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 - Initial released version
 
+[v0.0.6]: https://github.com/bfenetworks/conf-agent/compare/v0.0.5...v0.0.6
+[v0.0.5]: https://github.com/bfenetworks/conf-agent/compare/v0.0.2...v0.0.5
 [v0.0.2]: https://github.com/bfenetworks/conf-agent/compare/v0.0.1...v0.0.2
 [v0.0.1]: https://github.com/bfenetworks/conf-agent/releases/tag/v0.0.1

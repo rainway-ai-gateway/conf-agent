@@ -15,6 +15,8 @@
 package agent
 
 import (
+	"sync"
+
 	"github.com/rainway-ai-gateway/conf-agent/conf_reload"
 	"github.com/rainway-ai-gateway/conf-agent/config"
 )
@@ -22,7 +24,8 @@ import (
 // The Agent keep reloaders.
 // Agent Start will start all reloaders
 type Agent struct {
-	stop chan bool
+	stop     chan bool
+	stopOnce sync.Once
 
 	reloaders []*conf_reload.Reloader
 }
@@ -52,6 +55,13 @@ func (agent *Agent) Start() {
 	<-agent.stop
 }
 
+// Stop signals all reloaders to exit. It is safe to call multiple times.
 func (agent *Agent) Stop() {
-	agent.stop <- true
+	agent.stopOnce.Do(func() {
+		close(agent.stop)
+	})
+
+	for _, reloader := range agent.reloaders {
+		reloader.Stop()
+	}
 }

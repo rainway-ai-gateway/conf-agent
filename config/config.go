@@ -39,6 +39,8 @@ type ReloaderConfig struct {
 
 	CopyFiles []string
 
+	VersionKeepCount int
+
 	NormalFileTasks       []*NormalFileTaskConfig
 	MultiJSONKeyFileTasks []*MultiJSONKeyFileTaskConfig
 	ExtraFileFileTasks    []*ExtraFileTaskConfig
@@ -143,7 +145,8 @@ func newReloaderConfig(rcf *ReloaderConfigFile, basic BasicFile) (*ReloaderConfi
 			ConfDir:          rcf.ConfDir,
 			ReloadFile:       rcf.ReloadFile,
 		},
-		CopyFiles: rcf.CopyFiles,
+		CopyFiles:        rcf.CopyFiles,
+		VersionKeepCount: rcf.VersionKeepCount,
 	}
 
 	for _, task := range rcf.NormalFileTasks {

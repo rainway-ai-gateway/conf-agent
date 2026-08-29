@@ -17,6 +17,7 @@ package conf_reload
 import (
 	"context"
 	"math/rand"
+	"sync"
 	"time"
 
 	"github.com/rainway-ai-gateway/conf-agent/conf_reload/file_store"
@@ -35,6 +36,9 @@ type Reloader struct {
 	prober    *prober.Prober
 	trigger   *trigger.Trigger
 	fileStore *file_store.FileStore
+
+	stop     chan bool
+	stopOnce sync.Once
 }
 
 func NewReloader(rc *config.ReloaderConfig) (*Reloader, error) {
@@ -48,7 +52,7 @@ func NewReloader(rc *config.ReloaderConfig) (*Reloader, error) {
 		return nil, err
 	}
 
-	fileStore, err := file_store.NewFileStore(rc.ConfDir, rc.CopyFiles)
+	fileStore, err := file_store.NewFileStore(rc.ConfDir, rc.CopyFiles, rc.VersionKeepCount)
 	if err != nil {
 		return nil, err
 	}
@@ -60,6 +64,8 @@ func NewReloader(rc *config.ReloaderConfig) (*Reloader, error) {
 		prober:    prober,
 		trigger:   trigger,
 		fileStore: fileStore,
+
+		stop: make(chan bool),
 	}, nil
 }
 
@@ -68,10 +74,27 @@ func (r *Reloader) Start() {
 	time.Sleep(time.Duration(rand.Int()%int(r.ReloadInterval/time.Millisecond)) * time.Millisecond)
 
 	for {
+		select {
+		case <-r.stop:
+			return
+		default:
+		}
+
 		r.reload(xlog.NewContext(context.Background(), r.Name))
 
-		time.Sleep(r.ReloadInterval)
+		select {
+		case <-r.stop:
+			return
+		case <-time.After(r.ReloadInterval):
+		}
 	}
+}
+
+// Stop signals the reloader goroutine to exit. It is safe to call multiple times.
+func (r *Reloader) Stop() {
+	r.stopOnce.Do(func() {
+		close(r.stop)
+	})
 }
 
 func (r *Reloader) reload(ctx context.Context) {
@@ -120,6 +143,7 @@ func (r *Reloader) reload(ctx context.Context) {
 	err = r.fileStore.UpdateDefaultConfDir(ctx, version)
 	if err != nil {
 		xlog.Default.Error(xlog.ErrLogFormat(ctx, "UpdateDefaultConfDir fail", err))
+		return
 	}
 	xlog.Default.Info(xlog.InfoLogFormat(ctx, "UpdateDefaultConfDir succ"))
 
