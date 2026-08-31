@@ -17,12 +17,14 @@ package file_store
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/rainway-ai-gateway/conf-agent/xfile"
@@ -152,6 +154,29 @@ func (fileStore *FileStore) cleanupOldVersions(ctx context.Context, keep int) er
 	return nil
 }
 
+// renameDir renames a directory from src to dst. When rename fails with EXDEV
+// (cross-device link, common on overlay2 where lower-layer directories cannot
+// be renamed), it falls back to copy + delete.
+func renameDir(src, dst string) error {
+	if err := os.Rename(src, dst); err == nil {
+		return nil
+	} else if !errors.Is(err, syscall.EXDEV) {
+		return err
+	}
+
+	// EXDEV: src and dst are on different filesystems (e.g. overlay2 lower → upper).
+	// Fall back to recursive copy then remove source.
+	if err := xfile.FileCopyRecursive(src, dst); err != nil {
+		return fmt.Errorf("copy fallback fail, from: %s, to: %s, err: %v", src, dst, err)
+	}
+
+	if err := os.RemoveAll(src); err != nil {
+		return fmt.Errorf("remove source after copy fail, dir: %s, err: %v", src, err)
+	}
+
+	return nil
+}
+
 // UpdateDefaultConfDir updates default config directory with config files in tempory directory.
 func (fileStore *FileStore) UpdateDefaultConfDir(ctx context.Context, version string) error {
 	// Inspect ConfDir without following symlinks so we can distinguish a symlink
@@ -171,7 +196,7 @@ func (fileStore *FileStore) UpdateDefaultConfDir(ctx context.Context, version st
 		} else if info.IsDir() {
 			// ConfDir is a regular directory: back it up instead of deleting it.
 			backupDir := fileStore.ConfDir + "_" + strconv.FormatInt(time.Now().Unix(), 10) + ".backup"
-			if err := os.Rename(fileStore.ConfDir, backupDir); err != nil {
+			if err := renameDir(fileStore.ConfDir, backupDir); err != nil {
 				err = fmt.Errorf("backup dir fail, from: %s, to: %s, err: %v", fileStore.ConfDir, backupDir, err)
 				xlog.Default.Error(xlog.ErrLogFormat(ctx, "UpdateDefaultConfDir.Backup", err))
 				return err
