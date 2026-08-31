@@ -17,6 +17,7 @@ package file_store
 import (
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -298,5 +299,79 @@ func assertDirNotExists(t *testing.T, dir string) {
 	t.Helper()
 	if _, err := os.Stat(dir); !os.IsNotExist(err) {
 		t.Fatalf("expect dir %s to not exist", dir)
+	}
+}
+
+func TestRenameDirSameDevice(t *testing.T) {
+	tmpDir := t.TempDir()
+	src := filepath.Join(tmpDir, "src")
+	dst := filepath.Join(tmpDir, "dst")
+
+	if err := os.MkdirAll(src, os.ModePerm); err != nil {
+		t.Fatalf("mkdir fail, err: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(src, "test.txt"), []byte("hello"), 0644); err != nil {
+		t.Fatalf("write file fail, err: %v", err)
+	}
+
+	if err := renameDir(src, dst); err != nil {
+		t.Fatalf("renameDir fail, err: %v", err)
+	}
+
+	assertDirNotExists(t, src)
+	assertDirExists(t, dst)
+
+	content, err := os.ReadFile(filepath.Join(dst, "test.txt"))
+	if err != nil {
+		t.Fatalf("read file fail, err: %v", err)
+	}
+	if string(content) != "hello" {
+		t.Fatalf("expect content 'hello', got '%s'", string(content))
+	}
+}
+
+func TestRenameDirCrossDeviceFallback(t *testing.T) {
+	// Requires Linux + root to mount tmpfs. Skip otherwise.
+	if os.Getuid() != 0 {
+		t.Skip("requires root to mount tmpfs for cross-device test")
+	}
+
+	tmpDir := t.TempDir()
+	src := filepath.Join(tmpDir, "src")
+	dst := filepath.Join(tmpDir, "dst")
+
+	if err := os.MkdirAll(src, os.ModePerm); err != nil {
+		t.Fatalf("mkdir fail, err: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(src, "test.txt"), []byte("cross-device"), 0644); err != nil {
+		t.Fatalf("write file fail, err: %v", err)
+	}
+
+	tmpfsDir := filepath.Join(tmpDir, "tmpfs")
+	if err := os.MkdirAll(tmpfsDir, os.ModePerm); err != nil {
+		t.Fatalf("mkdir tmpfs fail, err: %v", err)
+	}
+
+	cmd := exec.Command("mount", "-t", "tmpfs", "-o", "size=10M", "tmpfs", tmpfsDir)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Skipf("mount tmpfs fail (need root+linux): %v, output: %s", err, string(out))
+	}
+	defer exec.Command("umount", tmpfsDir).Run()
+
+	dst = filepath.Join(tmpfsDir, "dst")
+
+	if err := renameDir(src, dst); err != nil {
+		t.Fatalf("renameDir cross-device fail, err: %v", err)
+	}
+
+	assertDirNotExists(t, src)
+	assertDirExists(t, dst)
+
+	content, err := os.ReadFile(filepath.Join(dst, "test.txt"))
+	if err != nil {
+		t.Fatalf("read file fail, err: %v", err)
+	}
+	if string(content) != "cross-device" {
+		t.Fatalf("expect content 'cross-device', got '%s'", string(content))
 	}
 }
