@@ -261,7 +261,14 @@ func (fileStore *FileStore) StoreFile2TmpDir(ctx context.Context, version string
 	// copy config files (listed in fileStore.CopyFiles) from default dir to tmp dir
 	for _, copyFile := range fileStore.CopyFiles {
 		file := filepath.Join(fileStore.ConfDir, copyFile)
-		if err := xfile.FileCopyRecursive(file, tmpDir); err != nil {
+		// xfile.FileCopyRecursive copies a directory's *contents* into the
+		// destination, so directories must be copied to tmpDir/<name> to keep
+		// their entry name in the versioned config dir.
+		target := tmpDir
+		if info, err := os.Stat(file); err == nil && info.IsDir() {
+			target = filepath.Join(tmpDir, copyFile)
+		}
+		if err := xfile.FileCopyRecursive(file, target); err != nil {
 			if xfile.IsFileNotExistError(err) {
 				xlog.Default.Info(xlog.ErrLogFormat(ctx, "fileStore.CopyFiles", err))
 				continue

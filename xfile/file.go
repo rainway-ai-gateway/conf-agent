@@ -102,6 +102,11 @@ func copyDir(src, dst string) error {
 		return err
 	}
 
+	// create dst up front so empty directories are copied too
+	if err := os.MkdirAll(dst, srcInfo.Mode()); err != nil {
+		return err
+	}
+
 	entries, err := ioutil.ReadDir(src)
 	if err != nil {
 		return err

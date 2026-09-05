@@ -65,6 +65,52 @@ func TestStoreFile2TmpDirWritesVersionMarker(t *testing.T) {
 	}
 }
 
+// CopyFiles entries that are directories must keep their entry name in the
+// versioned config dir (e.g. tls_conf version dir needs client_ca/ and
+// client_crl/ subdirs for BFE to load a self-contained config unit).
+func TestStoreFile2TmpDirCopyFilesKeepDirEntry(t *testing.T) {
+	tmpDir := t.TempDir()
+	confDir := filepath.Join(tmpDir, "tls_conf")
+	if err := os.MkdirAll(filepath.Join(confDir, "client_ca"), 0755); err != nil {
+		t.Fatalf("mkdir client_ca fail, err: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Join(confDir, "client_crl"), 0755); err != nil {
+		t.Fatalf("mkdir client_crl fail, err: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(confDir, "client_ca", "example_ca.crt"), []byte("ca"), 0644); err != nil {
+		t.Fatalf("write ca file fail, err: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(confDir, "tls_rule_conf.data"), []byte("{}"), 0644); err != nil {
+		t.Fatalf("write tls rule fail, err: %v", err)
+	}
+
+	fs, err := NewFileStore(confDir, []string{"client_ca", "client_crl", "tls_rule_conf.data"}, 2)
+	if err != nil {
+		t.Fatalf("NewFileStore fail, err: %v", err)
+	}
+
+	version := "20260101120000"
+	if err := fs.StoreFile2TmpDir(context.Background(), version, nil); err != nil {
+		t.Fatalf("StoreFile2TmpDir fail, err: %v", err)
+	}
+
+	versionDir := fs.tmpDir(version)
+	for _, rel := range []string{
+		filepath.Join("client_ca", "example_ca.crt"),
+		filepath.Join("client_crl"),
+		"tls_rule_conf.data",
+	} {
+		if _, err := os.Stat(filepath.Join(versionDir, rel)); err != nil {
+			t.Fatalf("expect %s in version dir, err: %v", rel, err)
+		}
+	}
+
+	// directory contents must not be flattened into the version dir root
+	if _, err := os.Stat(filepath.Join(versionDir, "example_ca.crt")); !os.IsNotExist(err) {
+		t.Fatalf("ca file should not exist at version dir root")
+	}
+}
+
 func TestCleanupOldVersionsKeepRecentN(t *testing.T) {
 	tmpDir := t.TempDir()
 	confDir := filepath.Join(tmpDir, "mod_demo")
