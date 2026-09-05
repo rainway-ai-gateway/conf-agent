@@ -38,11 +38,11 @@ type Reloader struct {
 	trigger   *trigger.Trigger
 	fileStore *file_store.FileStore
 
-	// consecutiveTriggerFailures counts consecutive BFE reload trigger
-	// failures. While it keeps growing, the symlink is never switched and
-	// BFE keeps running the old config, so a summary log is emitted
+	// consecutiveFailures counts consecutive reload failures at the store or
+	// trigger stage. While it keeps growing, the symlink is never switched
+	// and BFE keeps running the old config, so a summary log is emitted
 	// periodically to make the stuck state visible.
-	consecutiveTriggerFailures int
+	consecutiveFailures int
 
 	stop     chan bool
 	stopOnce sync.Once
@@ -104,6 +104,29 @@ func (r *Reloader) Stop() {
 	})
 }
 
+// noteFailure records a failed reload stage: bump the consecutive failure
+// counter and, every 10 failures, emit a summary error so a permanently
+// stuck reload loop does not stay silent.
+func (r *Reloader) noteFailure(ctx context.Context, stage, version string, err error) {
+	r.consecutiveFailures++
+	xlog.Default.Error(xlog.ErrLogFormat(ctx, stage+" fail", err))
+	if r.consecutiveFailures%10 == 0 {
+		xlog.Default.Error(xlog.InfoLogFormat(ctx, "reload keeps failing",
+			fmt.Sprintf("stage: %s, consecutive: %d, version: %s, symlink not switched, bfe still runs old config",
+				stage, r.consecutiveFailures, version)))
+	}
+}
+
+// noteSuccess resets the failure counter after a successful trigger and
+// logs recovery if the previous reloads had been failing.
+func (r *Reloader) noteSuccess(ctx context.Context) {
+	if r.consecutiveFailures > 0 {
+		xlog.Default.Info(xlog.InfoLogFormat(ctx, "reload recovered",
+			fmt.Sprintf("after %d consecutive failures", r.consecutiveFailures)))
+		r.consecutiveFailures = 0
+	}
+}
+
 func (r *Reloader) reload(ctx context.Context) {
 	xlog.Default.Info(xlog.InfoLogFormat(ctx, "reload begin"))
 
@@ -117,7 +140,7 @@ func (r *Reloader) reload(ctx context.Context) {
 
 	// no newer data file, exit
 	if len(fileList) == 0 {
-		r.consecutiveTriggerFailures = 0
+		r.consecutiveFailures = 0
 		xlog.Default.Info(xlog.InfoLogFormat(ctx, "reload succ", "without_update"))
 		return
 	}
@@ -134,7 +157,7 @@ func (r *Reloader) reload(ctx context.Context) {
 	// store all newer data file
 	err = r.fileStore.StoreFile2TmpDir(ctx, version, files)
 	if err != nil {
-		xlog.Default.Error(xlog.ErrLogFormat(ctx, "StoreFile2TmpDir fail", err))
+		r.noteFailure(ctx, "StoreFile2TmpDir", version, err)
 		return
 	}
 	xlog.Default.Info(xlog.InfoLogFormat(ctx, "StoreFile2TmpDir succ"))
@@ -142,20 +165,10 @@ func (r *Reloader) reload(ctx context.Context) {
 	// trigger bfe reload
 	err = r.trigger.TriggerBFEReload(ctx, version)
 	if err != nil {
-		r.consecutiveTriggerFailures++
-		xlog.Default.Error(xlog.ErrLogFormat(ctx, "TriggerBFEReload fail", err))
-		if r.consecutiveTriggerFailures%10 == 0 {
-			xlog.Default.Error(xlog.InfoLogFormat(ctx, "TriggerBFEReload keeps failing",
-				fmt.Sprintf("consecutive: %d, version: %s, symlink not switched, bfe still runs old config",
-					r.consecutiveTriggerFailures, version)))
-		}
+		r.noteFailure(ctx, "TriggerBFEReload", version, err)
 		return
 	}
-	if r.consecutiveTriggerFailures > 0 {
-		xlog.Default.Info(xlog.InfoLogFormat(ctx, "TriggerBFEReload recovered",
-			fmt.Sprintf("after %d consecutive failures", r.consecutiveTriggerFailures)))
-		r.consecutiveTriggerFailures = 0
-	}
+	r.noteSuccess(ctx)
 	xlog.Default.Info(xlog.InfoLogFormat(ctx, "TriggerBFEReload succ"))
 
 	// replace old config by newest, if fail, it's ok

@@ -94,9 +94,9 @@ func TestReload_ConsecutiveTriggerFailures(t *testing.T) {
 	// 3 consecutive failures: counter grows, symlink never created
 	for i := 1; i <= 3; i++ {
 		r.reload(ctx)
-		if r.consecutiveTriggerFailures != i {
-			t.Fatalf("after failure %d, consecutiveTriggerFailures = %d, want %d",
-				i, r.consecutiveTriggerFailures, i)
+		if r.consecutiveFailures != i {
+			t.Fatalf("after failure %d, consecutiveFailures = %d, want %d",
+				i, r.consecutiveFailures, i)
 		}
 		if _, err := os.Lstat(confDir); !os.IsNotExist(err) {
 			t.Fatalf("conf dir should not be created while trigger fails, err: %v", err)
@@ -109,8 +109,8 @@ func TestReload_ConsecutiveTriggerFailures(t *testing.T) {
 	triggerMu.Unlock()
 
 	r.reload(ctx)
-	if r.consecutiveTriggerFailures != 0 {
-		t.Fatalf("after recovery, consecutiveTriggerFailures = %d, want 0", r.consecutiveTriggerFailures)
+	if r.consecutiveFailures != 0 {
+		t.Fatalf("after recovery, consecutiveFailures = %d, want 0", r.consecutiveFailures)
 	}
 	info, err := os.Lstat(confDir)
 	if err != nil {
@@ -122,8 +122,60 @@ func TestReload_ConsecutiveTriggerFailures(t *testing.T) {
 
 	// nothing newer: without_update path keeps counter at zero
 	r.reload(ctx)
-	if r.consecutiveTriggerFailures != 0 {
-		t.Fatalf("after without_update, consecutiveTriggerFailures = %d, want 0",
-			r.consecutiveTriggerFailures)
+	if r.consecutiveFailures != 0 {
+		t.Fatalf("after without_update, consecutiveFailures = %d, want 0",
+			r.consecutiveFailures)
+	}
+}
+
+// TestReload_ConsecutiveStoreFailures verifies that failures at the
+// StoreFile2TmpDir stage also count towards the consecutive failure counter
+// and recover cleanly (conf-agent#20: the stuck state happened at this
+// stage, before the trigger, so trigger-only counting stayed silent).
+func TestReload_ConsecutiveStoreFailures(t *testing.T) {
+	confSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"ErrNum":200,"Data":{"Version":"20260904230000","Config":{}}}`)
+	}))
+	defer confSrv.Close()
+
+	triggerSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"error":null}`)
+	}))
+	defer triggerSrv.Close()
+
+	parentDir := t.TempDir()
+	confDir := filepath.Join(parentDir, "mod_test")
+	r := newTestReloader(t, confSrv, triggerSrv, confDir)
+	ctx := context.Background()
+
+	// make the parent dir read-only so MkdirAll of the version dir fails
+	if err := os.Chmod(parentDir, 0555); err != nil {
+		t.Fatalf("chmod parent dir fail: %v", err)
+	}
+	defer os.Chmod(parentDir, 0755)
+
+	for i := 1; i <= 3; i++ {
+		r.reload(ctx)
+		if r.consecutiveFailures != i {
+			t.Fatalf("after store failure %d, consecutiveFailures = %d, want %d",
+				i, r.consecutiveFailures, i)
+		}
+	}
+
+	// store recovers: counter resets and symlink is switched
+	if err := os.Chmod(parentDir, 0755); err != nil {
+		t.Fatalf("chmod parent dir back fail: %v", err)
+	}
+
+	r.reload(ctx)
+	if r.consecutiveFailures != 0 {
+		t.Fatalf("after recovery, consecutiveFailures = %d, want 0", r.consecutiveFailures)
+	}
+	info, err := os.Lstat(confDir)
+	if err != nil {
+		t.Fatalf("conf dir should be created after recovery: %v", err)
+	}
+	if info.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("conf dir should be a symlink, mode: %v", info.Mode())
 	}
 }
