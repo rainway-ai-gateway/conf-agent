@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
-## [v0.0.8-preview.1] - 2026-10-20
+## [v0.0.8] - 2026-10-20
 
 ### Added
 - Register Reloaders for `mod_ai_cache`, `mod_traffic_mirror` and `mod_ai_intent` in the shipped `conf/conf-agent.toml`: their data-plane config (`ai_cache.data` / `mirror_rule.data` / `intent_questions.data`) is now fetched from `/inner-api/v1/configs/*` and pushed to BFE through the corresponding module reload API.
@@ -71,7 +71,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 - Initial released version
 
-[v0.0.8-preview.1]: https://github.com/rainway-ai-gateway/conf-agent/compare/v0.0.7...v0.0.8-preview.1
+[v0.0.8]: https://github.com/rainway-ai-gateway/conf-agent/compare/v0.0.7...v0.0.8
 [v0.0.7]: https://github.com/rainway-ai-gateway/conf-agent/compare/v0.0.6...v0.0.7
 [v0.0.6]: https://github.com/bfenetworks/conf-agent/compare/v0.0.5...v0.0.6
 [v0.0.5]: https://github.com/bfenetworks/conf-agent/compare/v0.0.2...v0.0.5
