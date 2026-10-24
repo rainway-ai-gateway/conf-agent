@@ -10,6 +10,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
+## [v0.0.8] - 2026-10-20
+
+### Added
+- Register Reloaders for `mod_ai_cache`, `mod_traffic_mirror` and `mod_ai_intent` in the shipped `conf/conf-agent.toml`: their data-plane config (`ai_cache.data` / `mirror_rule.data` / `intent_questions.data`) is now fetched from `/inner-api/v1/configs/*` and pushed to BFE through the corresponding module reload API.
+- Register the `mod_ai_context` Reloader (`context_rule.data`, fetched from `/inner-api/v1/configs/ai-context-rule` and hot reloaded via `/reload/mod_ai_context`), completing the AI context compression/trimming chain.
+
+### Changed
+- Comment out the `[Reloaders.tls_conf]` section in the shipped `conf/conf-agent.toml`: TLS material (server certificates, client CA/CRL) is not deployed and the control plane does not export that config yet, so polling it only produced ERROR-level logs on both conf-agent and BFE. Uncomment the section to re-enable it once TLS is rolled out.
+
+### Notes
+- Configuration-only release: no Go code changes since v0.0.7. All Reloaders are map-driven, so enabling the new ones means merging the shipped `conf/conf-agent.toml` into the deployment config; existing Reloaders are unaffected.
+
+
 ## [v0.0.7] - 2026-09-13
 
 ### Fixed
@@ -58,6 +71,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 - Initial released version
 
+[v0.0.8]: https://github.com/rainway-ai-gateway/conf-agent/compare/v0.0.7...v0.0.8
 [v0.0.7]: https://github.com/rainway-ai-gateway/conf-agent/compare/v0.0.6...v0.0.7
 [v0.0.6]: https://github.com/bfenetworks/conf-agent/compare/v0.0.5...v0.0.6
 [v0.0.5]: https://github.com/bfenetworks/conf-agent/compare/v0.0.2...v0.0.5

@@ -79,10 +79,46 @@ CopyFiles       = ["ai_route.data", "mod_ai_route.conf"]
 ConfAPI         = "/inner-api/v1/configs/ai-route"
 ConfFileName    = "ai_route.data"
 
+# reloader for mod_ai_cache
+[Reloaders.mod_ai_cache]
+BFEReloadAPI    = "/reload/mod_ai_cache"
+ReloadFile      = "ai_cache.data"
+CopyFiles       = ["ai_cache.data", "mod_ai_cache.conf"]
+[[Reloaders.mod_ai_cache.NormalFileTasks]]
+ConfAPI         = "/inner-api/v1/configs/ai-cache-rule"
+ConfFileName    = "ai_cache.data"
+
+# reloader for mod_traffic_mirror
+[Reloaders.mod_traffic_mirror]
+BFEReloadAPI    = "/reload/mod_traffic_mirror"
+ReloadFile      = "mirror_rule.data"
+CopyFiles       = ["mirror_rule.data", "mod_traffic_mirror.conf"]
+[[Reloaders.mod_traffic_mirror.NormalFileTasks]]
+ConfAPI         = "/inner-api/v1/configs/traffic-mirror-rule"
+ConfFileName    = "mirror_rule.data"
+
+# reloader for mod_ai_intent
+[Reloaders.mod_ai_intent]
+BFEReloadAPI    = "/reload/mod_ai_intent"
+ReloadFile      = "intent_questions.data"
+CopyFiles       = ["intent_questions.data", "mod_ai_intent.conf"]
+[[Reloaders.mod_ai_intent.NormalFileTasks]]
+ConfAPI         = "/inner-api/v1/configs/mod-ai-intent"
+ConfFileName    = "intent_questions.data"
+
+# reloader for mod_ai_context
+[Reloaders.mod_ai_context]
+BFEReloadAPI    = "/reload/mod_ai_context"
+ReloadFile      = "context_rule.data"
+CopyFiles       = ["context_rule.data", "mod_ai_context.conf"]
+[[Reloaders.mod_ai_context.NormalFileTasks]]
+ConfAPI         = "/inner-api/v1/configs/ai-context-rule"
+ConfFileName    = "context_rule.data"
+
 # # reloader for tls_conf files, detail see https://www.bfe-networks.net/en_us/configuration/tls_conf/server_cert_conf.data/
-[Reloaders.tls_conf]
-CopyFiles      = ["client_ca", "client_crl", "server_cert_conf.data", "session_ticket_key.data", "tls_rule_conf.data"]
-[[Reloaders.tls_conf.ExtraFileTasks]]
-ConfAPI             = "/inner-api/v1/configs/protocol/server_cert_conf"
-ConfFileName        = "server_cert_conf.data"
-ExtraFileJSONPaths  = ["$.Config.CertConf.*.ServerCertFile", "$.Config.CertConf.*.ServerKeyFile"]
+# [Reloaders.tls_conf]
+# CopyFiles      = ["client_ca", "client_crl", "server_cert_conf.data", "session_ticket_key.data", "tls_rule_conf.data"]
+# [[Reloaders.tls_conf.ExtraFileTasks]]
+# ConfAPI             = "/inner-api/v1/configs/protocol/server_cert_conf"
+# ConfFileName        = "server_cert_conf.data"
+# ExtraFileJSONPaths  = ["$.Config.CertConf.*.ServerCertFile", "$.Config.CertConf.*.ServerKeyFile"]
