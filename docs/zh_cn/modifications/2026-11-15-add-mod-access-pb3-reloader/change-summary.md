@@ -8,7 +8,7 @@
 
 - BFE 数据面：`mod_access_pb3` 支持动态配置文件 `mod_access_pb.data`（多段式
   JSON，当前含 `access_header` 白名单段），经 web monitor reload 接口
-  `/reload/mod_access_pb3` 热加载（`bfe` 仓库 `v1.10.0-dev` 提交 `25f5e65e`，
+  `/reload/mod_access_pb3` 热加载（`bfe` 仓库 `v1.10.0-dev` 提交 `c3ddeb18`，
   SC49 集成测试 8/8 通过）；
 - 控制面：`ai-gateway-api` 单例资源 `GET/PUT /open-api/v1/access-log/config`
   + 导出端点 `/inner-api/v1/configs/mod-access-pb`（topic `mod_access_pb`，
@@ -74,7 +74,7 @@ ConfFileName    = "mod_access_pb.data"
 
 ## 关联
 
-- BFE：`25f5e65e`（`v1.10.0-dev`；见
+- BFE：`c3ddeb18`（`v1.10.0-dev`；见
   `docs/zh_cn/modifications/2026-11-15-issue-1506-mod-access-pb3-header-whitelist/design-changes.md`、
   `docs/zh_cn/sys_design/mod_access_pb_data_conf.md`，SC49 集成测试 8/8）；
 - ai-gateway-api：`44f676a`（`v0.2.0-dev`；见
